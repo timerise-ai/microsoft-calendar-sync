@@ -5,6 +5,9 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-059669)](https://docs.claude.com/en/docs/claude-code/skills)
 [![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-059669)](https://developers.openai.com/codex/skills)
 [![Gemini CLI](https://img.shields.io/badge/Gemini_CLI-compatible-059669)](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/skills.md)
+[![Eval claude-opus-5-5](https://img.shields.io/badge/eval_claude--opus--5--5-pass_8%2F8-059669)](evals/2026-10-16-claude-code-p1-5.md)
+[![Eval gpt-6.1-sol](https://img.shields.io/badge/eval_gpt--6.1--sol-pass_8%2F8-059669)](evals/2026-10-16-codex-p1-5.md)
+[![Eval gemini-3.8-flash](https://img.shields.io/badge/eval_gemini--3.8--flash-pass_8%2F8-059669)](evals/2026-10-16-gemini-cli-p1-5.md)
 
 An [Agent Skill](https://agentskills.io) that teaches an agent to build **two-way Microsoft 365 and Outlook
 calendar sync** over Microsoft Graph, in a **Next.js App Router** app or any other Node server through an
