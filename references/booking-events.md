@@ -9,7 +9,7 @@ and every write starts by finding the event through it.
 | Booking change | Call | Notes |
 |---|---|---|
 | Confirmed (or paid, whichever the host calls "booked") | `pushBookingEvent(deps, booking)` | Primary host's calendars with `syncBookings` and `isWritable` |
-| Cancelled, expired, refunded | `removeBookingEvent(deps, booking)` | Every host's `syncBookings` calendars |
+| Cancelled, expired, refunded | `removeBookingEvent(deps, booking)` | Every host's writable calendars, booking sync on or off |
 | Rescheduled into a new booking | `removeBookingEvent(old)` then `pushBookingEvent(new)` | A new booking id is a new event |
 | Time or title edited in place | `pushBookingEvent(deps, booking)` again | Found by the marker, PATCHed |
 | Host turns booking sync on | `backfillBookings` (automatic, via settings) | `BookingSource.listUpcomingForPrimaryHost` |
@@ -68,7 +68,8 @@ findEventsByMarker(bookingId)
 - **Only the primary host's calendars get the event.** Other hosts are attendees on it. Deletion still
   walks every host, which covers a primary host that changed after the event was written.
 - **Turning booking sync off leaves existing events in place.** Deleting a calendar's worth of events
-  on a toggle is not reversible.
+  on a toggle is not reversible. Cancelling one of those bookings still deletes its event: removal
+  searches every writable calendar by the marker, whatever its toggle says now.
 
 ## Code
 
@@ -261,7 +262,9 @@ export async function removeBookingEvent(
   for (const hostId of booking.hostIds) {
     let calendars: LinkedCalendar[];
     try {
-      calendars = (await deps.store.listCalendars(hostId)).filter(c => c.syncBookings);
+      // Every writable calendar, not only those syncing bookings now: an event written before booking
+      // sync was turned off must still go when its booking is cancelled.
+      calendars = (await deps.store.listCalendars(hostId)).filter(c => c.isWritable);
     } catch {
       continue;
     }

@@ -113,26 +113,31 @@ This table is the seam contract; the skill has no `adaptation.md`. The rename ta
 | Background work | `defer` for notifications; `renewSubscriptions` every 12 h | `after()`, `waitUntil`, Cloud Scheduler, Vercel Cron |
 | Strings | `describeBooking` (event title/body), error codes | Its i18n |
 | Secrets | Client id/secret, clientState secret, 32-byte token key, marker GUID | Its secret manager |
-| Tests | `node:test` suite, memory store, fake Graph | Its runner |
+| Tests | `node:test` suite, memory store, fake Graph | `npm test`, running the files unchanged |
 
 ## Quick start
 
+Every template is copied verbatim, renames from [data-model.md](references/data-model.md) aside; only
+`setup.ts` and the route files are adapted. A template that looks wrong is kept as shipped and named in the
+final summary. The package registry is not an external service: install the store's SDK from it.
+
 1. Register the app in Entra ID and generate the marker GUID:
    [oauth-and-tokens.md](references/oauth-and-tokens.md).
-2. Copy the types and decide the rename: [data-model.md](references/data-model.md).
-3. Copy the Graph client: [graph-api.md](references/graph-api.md); and the zone map:
-   [time-zones.md](references/time-zones.md).
-4. Copy inbound sync: [busy-sync.md](references/busy-sync.md); outbound:
-   [booking-events.md](references/booking-events.md); subscriptions:
-   [subscriptions.md](references/subscriptions.md); the calendar list and toggles:
-   [calendars-and-settings.md](references/calendars-and-settings.md).
-5. Pick a store: [firestore-backend.md](references/firestore-backend.md) or
+2. Copy the types and decide the rename: [data-model.md](references/data-model.md); the Graph client
+   [graph-api.md](references/graph-api.md); the zone map [time-zones.md](references/time-zones.md).
+3. Copy inbound sync [busy-sync.md](references/busy-sync.md), outbound
+   [booking-events.md](references/booking-events.md), [subscriptions.md](references/subscriptions.md) and
+   the toggles [calendars-and-settings.md](references/calendars-and-settings.md).
+4. Pick a store and install its SDK: [firestore-backend.md](references/firestore-backend.md) or
    [supabase-backend.md](references/supabase-backend.md).
-6. Mount the routes, `defer` and the cron: [http-routes.md](references/http-routes.md).
-7. Copy the suite and run it under two `TZ` values: [testing.md](references/testing.md),
-   [test-suite.md](references/test-suite.md), [test-flows.md](references/test-flows.md).
-8. Give operators the health view: [operations.md](references/operations.md).
-9. Repairing an existing Graph integration? The fix order is in [provenance.md](references/provenance.md).
+5. Adapt `setup.ts`, mount the routes as shipped: [http-routes.md](references/http-routes.md).
+   `authenticate` never reads a user id the client sends.
+6. Copy [test-suite.md](references/test-suite.md) and [test-flows.md](references/test-flows.md) unchanged;
+   `npm test` runs them as [testing.md](references/testing.md) shows, 43 tests. Never edit or convert them.
+7. Write `.env.example`: the eleven variables of [operations.md](references/operations.md), empty, tracked,
+   none invented. The summary tells the operator to register the Entra app, fill the variables (marker
+   GUID and token key once), serve the notification URL on public HTTPS and call the cron every 12 hours.
+8. Repairing an existing Graph integration? The fix order is in [provenance.md](references/provenance.md).
 
 ## Reference directory
 

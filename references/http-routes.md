@@ -84,9 +84,15 @@ export async function handleNotification(
 
   const resync = new Set<string>();
   const renew = new Set<string>();
-  for (const entry of value as GraphNotification[]) {
+  for (const entry of value as (GraphNotification | null)[]) {
+    // A public endpoint gets junk: an entry that is not an object, or has no string clientState, is
+    // skipped like a forgery, so it neither answers 500 nor stops the entries beside it.
+    if (typeof entry !== 'object' || entry === null || typeof entry.clientState !== 'string') {
+      deps.log.warn('microsoft-calendar-webhook-bad-client-state', {});
+      continue;
+    }
     // Verified before any lookup: junk traffic costs an HMAC, not a database read.
-    const subscriptionId = verifyClientState(entry.clientState ?? '', deps.config.clientStateSecret);
+    const subscriptionId = verifyClientState(entry.clientState, deps.config.clientStateSecret);
     if (!subscriptionId) {
       deps.log.warn('microsoft-calendar-webhook-bad-client-state', { graphId: entry.subscriptionId });
       continue;
@@ -345,7 +351,13 @@ export function createCalendarRoutes(deps: CalendarSyncDeps, options: CalendarRo
 ## Wiring
 
 One module builds the dependencies. This example uses Firestore and environment variables; swap the
-store and the declared host functions for your own.
+store and the declared host functions for your own. On Supabase the store line becomes
+`createSupabaseCalendarStore(createClient(url, serviceRoleKey))` from
+[supabase-backend.md](supabase-backend.md), with `@supabase/supabase-js` installed from the registry.
+
+Everything is built on the first request, never at import: `next build` imports every route module
+without the secrets, and a missing variable then fails the one request that needs it, by name. This is
+the whole job of the module; it needs no fallback values, no `503` of its own and no other laziness.
 
 ```ts
 // microsoft-calendar/setup.ts: the one place that builds the deps (example: Firestore, env vars)
@@ -368,47 +380,69 @@ declare function listUpcomingBookingsForHost(userId: string, from: Date): Promis
 declare function saveMeetingUrl(bookingId: string, url: string): Promise<void>;
 declare function businessTimeZoneOfHost(userId: string): Promise<string | null>;
 
-const config = {
-  ...DEFAULT_SYNC_SETTINGS,
-  clientId: required('MICROSOFT_CALENDAR_CLIENT_ID'),
-  clientSecret: required('MICROSOFT_CALENDAR_CLIENT_SECRET'),
-  tenant: process.env.MICROSOFT_CALENDAR_TENANT ?? DEFAULT_SYNC_SETTINGS.tenant,
-  redirectUri: required('MICROSOFT_CALENDAR_REDIRECT_URI'),
-  notificationUrl: required('MICROSOFT_CALENDAR_NOTIFICATION_URL'),
-  clientStateSecret: required('MICROSOFT_CALENDAR_CLIENT_STATE_SECRET'),
-  encryptionKey: required('CALENDAR_TOKEN_KEY'),
-  markerPropertySetId: required('MICROSOFT_CALENDAR_MARKER_GUID'),
-  defaultTimeZone: required('MICROSOFT_CALENDAR_DEFAULT_TIME_ZONE'),
-};
+export type CalendarRoutes = ReturnType<typeof createCalendarRoutes>;
 
-export const calendarDeps: CalendarSyncDeps = {
-  store: createFirestoreCalendarStore(getFirestore()),
-  graph: createGraphApi(config),
-  config,
-  bookings: { listUpcomingForPrimaryHost: listUpcomingBookingsForHost },
-  log: {
-    info: (kind, data) => console.log(JSON.stringify({ severity: 'INFO', kind, ...data })),
-    warn: (kind, data) => console.warn(JSON.stringify({ severity: 'WARNING', kind, ...data })),
-    error: (kind, data) => console.error(JSON.stringify({ severity: 'ERROR', kind, ...data })),
-  },
-  now: () => new Date(),
-  onConferenceLink: saveMeetingUrl,
-  hostTimeZone: businessTimeZoneOfHost,
-};
+function build(): { deps: CalendarSyncDeps; routes: CalendarRoutes } {
+  const config = {
+    ...DEFAULT_SYNC_SETTINGS,
+    clientId: required('MICROSOFT_CALENDAR_CLIENT_ID'),
+    clientSecret: required('MICROSOFT_CALENDAR_CLIENT_SECRET'),
+    tenant: process.env.MICROSOFT_CALENDAR_TENANT || DEFAULT_SYNC_SETTINGS.tenant,
+    redirectUri: required('MICROSOFT_CALENDAR_REDIRECT_URI'),
+    notificationUrl: required('MICROSOFT_CALENDAR_NOTIFICATION_URL'),
+    clientStateSecret: required('MICROSOFT_CALENDAR_CLIENT_STATE_SECRET'),
+    encryptionKey: required('CALENDAR_TOKEN_KEY'),
+    markerPropertySetId: required('MICROSOFT_CALENDAR_MARKER_GUID'),
+    defaultTimeZone: required('MICROSOFT_CALENDAR_DEFAULT_TIME_ZONE'),
+  };
+  const deps: CalendarSyncDeps = {
+    store: createFirestoreCalendarStore(getFirestore()),
+    graph: createGraphApi(config),
+    config,
+    bookings: { listUpcomingForPrimaryHost: listUpcomingBookingsForHost },
+    log: {
+      info: (kind, data) => console.log(JSON.stringify({ severity: 'INFO', kind, ...data })),
+      warn: (kind, data) => console.warn(JSON.stringify({ severity: 'WARNING', kind, ...data })),
+      error: (kind, data) => console.error(JSON.stringify({ severity: 'ERROR', kind, ...data })),
+    },
+    now: () => new Date(),
+    onConferenceLink: saveMeetingUrl,
+    hostTimeZone: businessTimeZoneOfHost,
+  };
+  const routes = createCalendarRoutes(deps, {
+    authenticate: verifySession,
+    appReturnUrl: required('CALENDAR_RETURN_URL'),
+    cronSecret: required('CRON_SECRET'),
+    // A long-running server keeps working after the response. On serverless use the platform's
+    // after-response primitive instead (Next.js `after`, Vercel `waitUntil`).
+    defer: task => {
+      void task();
+    },
+  });
+  return { deps, routes };
+}
 
-export const calendarRoutes = createCalendarRoutes(calendarDeps, {
-  authenticate: verifySession,
-  appReturnUrl: required('CALENDAR_RETURN_URL'),
-  cronSecret: required('CRON_SECRET'),
-  // A long-running server keeps working after the response. On serverless use the platform's
-  // after-response primitive instead (Next.js `after`, Vercel `waitUntil`).
-  defer: task => {
-    void task();
-  },
-});
+let built: ReturnType<typeof build> | undefined;
+
+/** The deps for `pushBookingEvent` and `removeBookingEvent` in the host's booking flow. */
+export function calendarDeps(): CalendarSyncDeps {
+  return (built ??= build()).deps;
+}
+
+export function calendarRoutes(): CalendarRoutes {
+  return (built ??= build()).routes;
+}
 ```
 
-Next.js App Router (pass `defer: after` from `next/server` in `setup.ts` there):
+`authenticate` is the host's session check, and only that: it returns the user id of a verified session
+or token, or `null`. It never reads a user id the client sends, in a header, the query or the body,
+not even "for tests": the routes' tests pass their own `authenticate`, and a header any caller can set
+attaches anyone's calendar to anyone's account.
+
+Next.js App Router (pass `defer: after` from `next/server` in `setup.ts` there). Mount these two files as
+they are: `notifications` echoes Graph's `validationToken` and verifies before it schedules anything, so
+the route never parses or answers a notification itself. `cron` is on `GET` as well as `POST` because
+Vercel Cron sends `GET` with `Authorization: Bearer $CRON_SECRET`; the secret check is the same.
 
 ```ts
 // app/api/calendar/microsoft/[action]/route.ts: Next.js App Router
@@ -416,17 +450,18 @@ import { calendarRoutes } from '@/microsoft-calendar/setup';
 
 export async function GET(request: Request, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params;
-  if (action === 'connect') return calendarRoutes.connect(request);
-  if (action === 'callback') return calendarRoutes.callback(request);
-  if (action === 'calendars') return calendarRoutes.list(request);
+  if (action === 'connect') return calendarRoutes().connect(request);
+  if (action === 'callback') return calendarRoutes().callback(request);
+  if (action === 'calendars') return calendarRoutes().list(request);
+  if (action === 'cron') return calendarRoutes().cron(request);
   return new Response(null, { status: 404 });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params;
-  if (action === 'notifications') return calendarRoutes.notifications(request);
-  if (action === 'disconnect') return calendarRoutes.disconnect(request);
-  if (action === 'cron') return calendarRoutes.cron(request);
+  if (action === 'notifications') return calendarRoutes().notifications(request);
+  if (action === 'disconnect') return calendarRoutes().disconnect(request);
+  if (action === 'cron') return calendarRoutes().cron(request);
   return new Response(null, { status: 404 });
 }
 ```
@@ -436,7 +471,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
 import { calendarRoutes } from '@/microsoft-calendar/setup';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ calendarId: string }> }) {
-  return calendarRoutes.update(request, (await params).calendarId);
+  return calendarRoutes().update(request, (await params).calendarId);
 }
 ```
 
@@ -446,7 +481,7 @@ Express (the adapter turns each request into a Web `Request` once):
 // server/calendarRouter.ts: Express: adapt each request to the Web API once, and send the Response back.
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
 
-import { calendarRoutes } from '@/microsoft-calendar/setup';
+import { calendarRoutes, type CalendarRoutes } from '@/microsoft-calendar/setup';
 
 function toWebRequest(req: ExpressRequest): Request {
   const headers = new Headers();
@@ -470,21 +505,22 @@ async function send(res: ExpressResponse, response: Response): Promise<void> {
   res.send(Buffer.from(await response.arrayBuffer()));
 }
 
-type Handler = (request: Request) => Promise<Response>;
-const route = (handler: Handler) => (req: ExpressRequest, res: ExpressResponse) =>
-  handler(toWebRequest(req)).then(response => send(res, response));
+// The routes are built on the first request, like the Next.js handlers: pick the handler then.
+const route = (pick: (routes: CalendarRoutes) => (request: Request) => Promise<Response>) =>
+  (req: ExpressRequest, res: ExpressResponse) =>
+    pick(calendarRoutes())(toWebRequest(req)).then(response => send(res, response));
 
 export const calendarRouter = express.Router();
 calendarRouter.use(express.json());
-calendarRouter.get('/calendar/microsoft/connect', route(calendarRoutes.connect));
-calendarRouter.get('/calendar/microsoft/callback', route(calendarRoutes.callback));
-calendarRouter.get('/calendar/microsoft/calendars', route(calendarRoutes.list));
+calendarRouter.get('/calendar/microsoft/connect', route(r => r.connect));
+calendarRouter.get('/calendar/microsoft/callback', route(r => r.callback));
+calendarRouter.get('/calendar/microsoft/calendars', route(r => r.list));
 calendarRouter.patch('/calendar/microsoft/calendars/:calendarId', (req, res) =>
-  calendarRoutes.update(toWebRequest(req), String(req.params.calendarId)).then(response => send(res, response))
+  calendarRoutes().update(toWebRequest(req), String(req.params.calendarId)).then(response => send(res, response))
 );
-calendarRouter.post('/calendar/microsoft/disconnect', route(calendarRoutes.disconnect));
-calendarRouter.post('/calendar/microsoft/notifications', route(calendarRoutes.notifications));
-calendarRouter.post('/calendar/microsoft/cron', route(calendarRoutes.cron));
+calendarRouter.post('/calendar/microsoft/disconnect', route(r => r.disconnect));
+calendarRouter.post('/calendar/microsoft/notifications', route(r => r.notifications));
+calendarRouter.post('/calendar/microsoft/cron', route(r => r.cron));
 ```
 
 ## Checklist

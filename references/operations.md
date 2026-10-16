@@ -116,6 +116,18 @@ questions: `free`, `working-elsewhere`, `declined`, `own-booking`.
 | `CALENDAR_RETURN_URL` | `https://app.example.com/settings/calendar` | Where the callback lands |
 | `CRON_SECRET` | | Bearer for the cron route |
 
+Commit a `.env.example` with these eleven names and empty values, and un-ignore it when the app ignores
+`.env*`. The host's own store variables (the Supabase URL and service-role key, or the Firebase
+credentials) sit beside them; nothing else is added for the calendar. Invitation mode, horizon and the
+other `DEFAULT_SYNC_SETTINGS` are code, not variables, and no value falls back to a made-up default:
+`setup.ts` names the missing variable on the first request that needs it.
+
+The operator needs four things that no code can do for them: the Entra app registration (redirect URI,
+the delegated permissions in [oauth-and-tokens.md](oauth-and-tokens.md)), the variables filled in (the
+marker GUID and the token key generated once and never changed), the notification URL served on public
+HTTPS before busy sync is offered, and the cron below. An agent that builds this module ends its summary
+with those four.
+
 Schedule the cron every 12 hours (Cloud Scheduler, Vercel Cron, Kubernetes CronJob):
 
 ```bash

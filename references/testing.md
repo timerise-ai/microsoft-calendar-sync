@@ -21,7 +21,11 @@ for tz in UTC Europe/Warsaw Pacific/Auckland America/Los_Angeles; do
 done
 ```
 
-In a host with vitest or jest, the files run unchanged once the runner's TypeScript transform is on.
+Save that loop as a script (`scripts/test-calendar.sh`, with a temporary directory in place of
+`/tmp/mc-run`) and point `npm test` at it; it reports 43 tests per zone. In a host with vitest or jest,
+the files run unchanged once the runner's TypeScript transform is on. Either way the three test files stay
+exactly as shipped: no edited assertion, no added test inside them, no conversion to another runner and
+no transpiling shim. A test of the host's own code goes in a file of its own.
 
 **Run under at least two process time zones.** All-day anchoring and DST handling must not depend on
 the server's `TZ`; a test that passes only in UTC is how "works in production, fails on my laptop" starts.
@@ -44,11 +48,11 @@ the server's `TZ`; a test that passes only in UTC is how "works in production, f
 | Calendars.Read only: nothing writable | Booking writes failing with 403 |
 | every page imported; failed page deletes nothing | Truncated calendars; mass deletion on a transient error |
 | busy time imported when no subscription can be opened | No busy time at all while Graph refuses subscriptions |
-| webhook answers before syncing; a burst converges | Graph dropping notifications; duplicate blocks |
+| webhook answers before syncing; a burst converges; junk entries skipped | Graph dropping notifications; duplicate blocks; a 500 that drops a batch |
 | renew in place; 404 replaces; 409 clears | Subscriptions silently lost, forever |
 | lifecycle `subscriptionRemoved` replaces | Hours without notifications |
 | pushed twice is one event, no second write | Duplicate events; duplicate e-mails to attendees |
-| duplicates collapse; cancel twice; re-confirm | Leftover events; errors on repeat |
+| duplicates collapse; cancel twice; re-confirm; cancel after booking sync is off | Leftover events; errors on repeat |
 | rotated refresh token stored | Connections dying after an hour |
 | `invalid_grant` / `interaction_required` mean reauth; reconnect keeps settings | Empty calendar lists; re-configuring after every revoke |
 | other account tears down; calendar removed tears down | Stale busy time from calendars the user left |
@@ -67,11 +71,13 @@ Mutate the code back toward each defect and confirm a test fails. Each of these 
 | read any zone as UTC | `busyRules.ts` |
 | stop after the first page | `busySync.ts` |
 | accept a clientState without comparing its subscription | `webhook.ts` |
+| read `clientState` of an entry that is not an object | `webhook.ts` |
 | sync before answering | `webhook.ts`, `routes.ts` |
 | rethrow a 404 on renewal | `subscriptions.ts` |
 | no 409 handling on create | `subscriptions.ts` |
 | skip the sync when the subscription fails (toggle or cron) | `subscriptions.ts` |
 | always create; rewrite unchanged; keep duplicates | `bookingEvents.ts` |
+| remove only from calendars still syncing bookings | `bookingEvents.ts` |
 | no UTC fallback near DST | `bookingEvents.ts` |
 | keep the old refresh token | `tokens.ts` |
 | `interaction_required` not reauth | `tokens.ts` |

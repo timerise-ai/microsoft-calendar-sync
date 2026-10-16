@@ -187,7 +187,7 @@ test('webhook: validation echo, answers before syncing, and a burst converges', 
   assert.equal(env.memory.calendars.get(calendar.id)?.syncLeaseUntil, null);
 });
 
-test('webhook: forged, foreign and unknown notifications schedule nothing', async () => {
+test('webhook: forged, foreign, unknown and malformed notifications schedule nothing', async () => {
   const env = setup();
   const calendar = await connectWithBusySync(env);
   const good = notificationFor(env, calendar.id);
@@ -197,6 +197,10 @@ test('webhook: forged, foreign and unknown notifications schedule nothing', asyn
   const result = await handleNotification(env.deps, { validationToken: null, body: { value: [forged, foreign, unknown] } });
   assert.deepEqual(result, { status: 202 });
   assert.equal((await handleNotification(env.deps, { validationToken: null, body: { nope: 1 } })).status, 400);
+  // Junk beside a good entry is skipped; the good one is still scheduled.
+  const mixed = await handleNotification(env.deps, { validationToken: null, body: { value: [null, { clientState: 7 }, good] } });
+  assert.equal(mixed.status, 202);
+  assert.equal(typeof mixed.work, 'function');
 });
 
 test('busy time is imported even when Graph will not open a subscription', async () => {
@@ -325,16 +329,22 @@ test('outbound: duplicates left by racing triggers collapse to one', async () =>
   assert.deepEqual([...env.fake.eventsOf(PRIMARY).keys()], ['dup-1']);
 });
 
-test('outbound: cancelling deletes, twice is harmless, re-confirming writes it again', async () => {
+test('outbound: cancelling deletes, twice is harmless, re-confirming writes it again, sync off still deletes', async () => {
   const env = setup();
   await connect(env);
-  await updateCalendarSettings(env.deps, USER, (await primaryRow(env)).id, { syncBookings: true });
+  const primary = await primaryRow(env);
+  await updateCalendarSettings(env.deps, USER, primary.id, { syncBookings: true });
   await pushBookingEvent(env.deps, booking);
   assert.deepEqual((await removeBookingEvent(env.deps, booking)).map(r => r.ok), [true]);
   assert.deepEqual((await removeBookingEvent(env.deps, booking)).map(r => r.ok), [true]);
   assert.equal(env.fake.eventsOf(PRIMARY).size, 0);
   await pushBookingEvent(env.deps, booking);
   assert.equal(env.fake.eventsOf(PRIMARY).size, 1);
+  // Booking sync turned off after the event was written: the toggle leaves it, the cancellation removes it.
+  await updateCalendarSettings(env.deps, USER, primary.id, { syncBookings: false });
+  assert.equal(env.fake.eventsOf(PRIMARY).size, 1);
+  await removeBookingEvent(env.deps, booking);
+  assert.equal(env.fake.eventsOf(PRIMARY).size, 0);
 });
 
 test('outbound: turning booking sync on backfills upcoming bookings; read-only calendars refuse it', async () => {

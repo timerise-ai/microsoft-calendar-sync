@@ -97,7 +97,7 @@ against the 180-day window. **Shipped:** find by marker first, PATCH or skip, PO
 - **Teams join URLs written back to the booking** through `onConferenceLink`.
 - **Only the primary host's calendars receive the event**; deletion walks every host.
 - **`canEdit` decides writability.**
-- **Turning booking sync off leaves existing events.**
+- **Turning booking sync off leaves existing events**; cancelling one of their bookings still removes it.
 - **One Microsoft account per user.**
 
 ## Changed by design
@@ -126,6 +126,13 @@ and none has carried production traffic yet.
 - `inviteAttendees`, unchanged-write skip, duplicate collapse.
 - Supabase/Postgres store and schema, in [supabase-backend.md](supabase-backend.md).
 - The test suite, memory store and fake Graph, in [testing.md](testing.md).
+- From the 0.1.0 agent evals: a notification entry that is not an object, or has no string
+  `clientState`, is skipped instead of throwing a 500 that dropped the whole batch.
+- From the 0.1.0 agent evals: cancelling a booking deletes its event from every writable calendar, so an
+  event written before booking sync was turned off no longer outlives its booking.
+- From the 0.1.0 agent evals: `setup.ts` builds the deps on the first request, so `next build` runs
+  without the secrets and no agent adds fallbacks of its own; the Next.js cron route answers `GET` for
+  Vercel Cron.
 
 ## Known limit
 

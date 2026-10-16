@@ -72,8 +72,14 @@ match /microsoftCalendarBusyBlocks/{id} { allow read, write: if false; }
 
 ```ts
 // microsoft-calendar/store/firestore.ts
-import type { firestore } from 'firebase-admin';
-import { FieldPath, Timestamp } from 'firebase-admin/firestore';
+import {
+  FieldPath,
+  Timestamp,
+  type DocumentData,
+  type DocumentReference,
+  type Firestore,
+  type WriteBatch,
+} from 'firebase-admin/firestore';
 
 import type {
   AuthRequest,
@@ -95,7 +101,7 @@ const C = {
 const BATCH_LIMIT = 500;
 
 /** Timestamp to Date for the listed fields; everything else passes through. */
-function fromDoc<T>(data: firestore.DocumentData, dateFields: readonly string[]): T {
+function fromDoc<T>(data: DocumentData, dateFields: readonly string[]): T {
   const out: Record<string, unknown> = { ...data };
   for (const field of dateFields) {
     const value = data[field];
@@ -104,8 +110,8 @@ function fromDoc<T>(data: firestore.DocumentData, dateFields: readonly string[])
   return out as T;
 }
 
-function toDoc(data: object): firestore.DocumentData {
-  const out: firestore.DocumentData = {};
+function toDoc(data: object): DocumentData {
+  const out: DocumentData = {};
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
     out[key] = value instanceof Date ? Timestamp.fromDate(value) : value;
@@ -117,7 +123,7 @@ const CALENDAR_DATES = ['lastSyncedAt', 'syncLeaseUntil'] as const;
 const SUBSCRIPTION_DATES = ['expiresAt', 'createdAt'] as const;
 const BUSY_DATES = ['from', 'to'] as const;
 
-async function deleteInBatches(db: firestore.Firestore, refs: firestore.DocumentReference[]): Promise<void> {
+async function deleteInBatches(db: Firestore, refs: DocumentReference[]): Promise<void> {
   for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
     const batch = db.batch();
     for (const ref of refs.slice(i, i + BATCH_LIMIT)) batch.delete(ref);
@@ -125,7 +131,7 @@ async function deleteInBatches(db: firestore.Firestore, refs: firestore.Document
   }
 }
 
-export function createFirestoreCalendarStore(db: firestore.Firestore): CalendarStore {
+export function createFirestoreCalendarStore(db: Firestore): CalendarStore {
   const calendars = db.collection(C.calendars);
   const subscriptions = db.collection(C.subscriptions);
   const busy = db.collection(C.busy);
@@ -240,9 +246,9 @@ export function createFirestoreCalendarStore(db: firestore.Firestore): CalendarS
     },
 
     async applyBusyDiff(_calendarId, upserts, deleteIds) {
-      const writes: ((batch: firestore.WriteBatch) => void)[] = [
-        ...upserts.map(block => (batch: firestore.WriteBatch) => batch.set(busy.doc(block.id), toDoc(block))),
-        ...deleteIds.map(id => (batch: firestore.WriteBatch) => batch.delete(busy.doc(id))),
+      const writes: ((batch: WriteBatch) => void)[] = [
+        ...upserts.map(block => (batch: WriteBatch) => batch.set(busy.doc(block.id), toDoc(block))),
+        ...deleteIds.map(id => (batch: WriteBatch) => batch.delete(busy.doc(id))),
       ];
       for (let i = 0; i < writes.length; i += BATCH_LIMIT) {
         const batch = db.batch();
@@ -263,7 +269,7 @@ export function createFirestoreCalendarStore(db: firestore.Firestore): CalendarS
  * Needs the composite index `microsoftCalendarBusyBlocks (userId ASC, to ASC)`.
  */
 export async function listHostBusy(
-  db: firestore.Firestore,
+  db: Firestore,
   userId: string,
   range: { from: Date; to: Date }
 ): Promise<{ from: Date; to: Date }[]> {
