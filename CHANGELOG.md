@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-10-16
+
+From scoring the prompt-1 agent eval runs against 0.1.3. Wording only; no template changed.
+
+### Changed
+
+- The operator handover names `.env.example` as the list of variables to fill (`SKILL.md`,
+  `operations.md`).
+
 ## [0.1.3] - 2026-10-16
 
 From scoring the prompt-1 agent eval runs against 0.1.2. Wording only; no template changed.
