@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-10-16
+
+From scoring the prompt-1 agent eval runs against 0.1.1. Wording only; no template changed.
+
+### Changed
+
+- `setup.ts` changes only the store line, the host seams, `log` and `defer`; the `config` block stays as
+  shipped, and a different default is set through its variable and named in the summary
+  (`SKILL.md`, `http-routes.md`).
+- The shipped route handlers are mounted unwrapped; the host's own background work gets its own route
+  (`http-routes.md`).
+- The handover names each step's detail: redirect URI and permissions, the marker GUID and token key
+  generated once, the public HTTPS notification URL, the 12-hour cron (`SKILL.md`, `operations.md`).
+
 ## [0.1.1] - 2026-10-16
 
 Fix release, from scoring the prompt-1 agent eval runs against 0.1.0.
