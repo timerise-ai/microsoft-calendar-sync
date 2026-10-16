@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-10-16
+
+Fix release, from scoring the prompt-1 agent eval runs against 0.1.0.
+
+### Fixed
+
+- A notification entry that is not an object, or carries no string `clientState`, is skipped like a
+  forgery; it threw before, answering 500 and dropping the valid entries in the same batch. Apps built
+  from 0.1.0 copy the new guard in `webhook.ts`.
+- Cancelling a booking deletes its event from every writable calendar, so an event written before booking
+  sync was turned off no longer outlives its booking. Apps built from 0.1.0 copy the new filter in
+  `removeBookingEvent`.
+- The Firestore store imports its types from `firebase-admin/firestore`, so it compiles against
+  `firebase-admin` 14 as well as 13.
+
+### Changed
+
+- `setup.ts` builds the deps on the first request (`calendarRoutes()`, `calendarDeps()`), so `next build`
+  runs without secrets; the Next.js cron route also answers `GET`, for Vercel Cron (`http-routes.md`).
+- The quick start in `SKILL.md` says to copy templates verbatim, install the store SDK from the registry,
+  run the three test files unchanged through `npm test`, keep client-sent user ids out of `authenticate`,
+  write `.env.example` and hand the operator four steps, which `operations.md` and `testing.md` detail.
+- The suite still has 43 tests; two of them assert more.
+
 ## [0.1.0] - 2026-10-16
 
 First release: two-way Microsoft 365 calendar sync over Graph, written by the engineer who builds the
