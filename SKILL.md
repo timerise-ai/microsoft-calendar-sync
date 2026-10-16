@@ -135,7 +135,7 @@ final summary. The package registry is not an external service: install the stor
 6. Copy [test-suite.md](references/test-suite.md) and [test-flows.md](references/test-flows.md) unchanged;
    `npm test` runs them as [testing.md](references/testing.md) shows, 43 tests. Never edit or convert them.
 7. Write `.env.example`: the eleven variables of [operations.md](references/operations.md), empty, tracked,
-   none invented. The summary ends with four steps: register the Entra app; fill the variables, the marker
+   none invented. The summary ends with four steps: register the Entra app; fill `.env.example`, the marker
    GUID and token key generated once; serve the notification URL on public HTTPS; cron every 12 hours.
 8. Repairing an existing Graph integration? The fix order is in [provenance.md](references/provenance.md).
 

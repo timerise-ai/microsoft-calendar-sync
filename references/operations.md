@@ -123,8 +123,8 @@ other `DEFAULT_SYNC_SETTINGS` are code, not variables, and no value falls back t
 `setup.ts` names the missing variable on the first request that needs it.
 
 The operator needs four things that no code can do for them: the Entra app registration (redirect URI,
-the delegated permissions in [oauth-and-tokens.md](oauth-and-tokens.md)), the variables filled in (the
-marker GUID and the token key generated once and never changed), the notification URL served on public
+the delegated permissions in [oauth-and-tokens.md](oauth-and-tokens.md)), the variables of `.env.example`
+filled in (the marker GUID and the token key generated once and never changed), the notification URL served on public
 HTTPS before busy sync is offered, and the cron below every 12 hours. An agent that builds this module
 ends its summary with those four, each with its detail: the redirect URI and permissions, the GUID and key
 generated once, the notification URL, the 12-hour schedule.
