@@ -24,3 +24,8 @@ isolated: true
 timedOut: false
 runUrl: https://github.com/timerise-ai/microsoft-calendar-sync/actions/runs/38951298831
 ---
+
+Rubric 8/8, scored from the final summary. Templates copied unchanged with `setup.ts` the only adapted file;
+43 tests in four zones through `scripts/test-calendar.sh`; Supabase sign-in checked from a bearer token;
+`.env.example` un-ignored; personal accounts handed over as `MICROSOFT_CALENDAR_TENANT=common` rather than
+changed in code; and the summary ends with the four steps, each with its detail. Not rerun.
