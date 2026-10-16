@@ -359,6 +359,11 @@ Everything is built on the first request, never at import: `next build` imports 
 without the secrets, and a missing variable then fails the one request that needs it, by name. This is
 the whole job of the module; it needs no fallback values, no `503` of its own and no other laziness.
 
+What a host changes in `setup.ts` is the store line, the four declared host seams, `log` and `defer`. The
+`config` block stays as shipped: a different default for the operator (tenant `common`, an
+`inviteAttendees` mode) is set through the variable or `DEFAULT_SYNC_SETTINGS` and named in the final
+summary, never written into a fallback.
+
 ```ts
 // microsoft-calendar/setup.ts: the one place that builds the deps (example: Firestore, env vars)
 import { getFirestore } from 'firebase-admin/firestore';
@@ -442,7 +447,9 @@ attaches anyone's calendar to anyone's account.
 Next.js App Router (pass `defer: after` from `next/server` in `setup.ts` there). Mount these two files as
 they are: `notifications` echoes Graph's `validationToken` and verifies before it schedules anything, so
 the route never parses or answers a notification itself. `cron` is on `GET` as well as `POST` because
-Vercel Cron sends `GET` with `Authorization: Bearer $CRON_SECRET`; the secret check is the same.
+Vercel Cron sends `GET` with `Authorization: Bearer $CRON_SECRET`; the secret check is the same. The
+host's own background work (a retry queue, reminders) gets a route of its own; these handlers are never
+wrapped.
 
 ```ts
 // app/api/calendar/microsoft/[action]/route.ts: Next.js App Router

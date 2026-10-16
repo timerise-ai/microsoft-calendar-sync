@@ -130,13 +130,13 @@ final summary. The package registry is not an external service: install the stor
    the toggles [calendars-and-settings.md](references/calendars-and-settings.md).
 4. Pick a store and install its SDK: [firestore-backend.md](references/firestore-backend.md) or
    [supabase-backend.md](references/supabase-backend.md).
-5. Adapt `setup.ts`, mount the routes as shipped: [http-routes.md](references/http-routes.md).
-   `authenticate` never reads a user id the client sends.
+5. Adapt `setup.ts` (store, host seams, log, `defer`; config lines stay), mount the routes unwrapped:
+   [http-routes.md](references/http-routes.md). `authenticate` never reads a user id the client sends.
 6. Copy [test-suite.md](references/test-suite.md) and [test-flows.md](references/test-flows.md) unchanged;
    `npm test` runs them as [testing.md](references/testing.md) shows, 43 tests. Never edit or convert them.
 7. Write `.env.example`: the eleven variables of [operations.md](references/operations.md), empty, tracked,
-   none invented. The summary tells the operator to register the Entra app, fill the variables (marker
-   GUID and token key once), serve the notification URL on public HTTPS and call the cron every 12 hours.
+   none invented. The summary ends with four steps: register the Entra app; fill the variables, the marker
+   GUID and token key generated once; serve the notification URL on public HTTPS; cron every 12 hours.
 8. Repairing an existing Graph integration? The fix order is in [provenance.md](references/provenance.md).
 
 ## Reference directory
