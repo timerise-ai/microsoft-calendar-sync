@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-10-16
+
+From scoring the prompt-1 agent eval runs against 0.1.2. Wording only; no template changed.
+
+### Changed
+
+- Personal Outlook.com accounts are `MICROSOFT_CALENDAR_TENANT=common` in the operator handover, never a
+  tenant fallback written into `setup.ts`; the rule moved into the quick start in `SKILL.md`, and
+  `http-routes.md` names the case.
+
 ## [0.1.2] - 2026-10-16
 
 From scoring the prompt-1 agent eval runs against 0.1.1. Wording only; no template changed.
