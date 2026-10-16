@@ -7,13 +7,13 @@ form POSTs, and an interface over `fetch` is what the tests replace with a fake.
 
 | Method | HTTP | Notes |
 |---|---|---|
-| `authUrl` | — | `/{tenant}/oauth2/v2.0/authorize`, PKCE S256, `prompt=select_account` |
+| `authUrl` | none | `/{tenant}/oauth2/v2.0/authorize`, PKCE S256, `prompt=select_account` |
 | `exchangeCode` | `POST /{tenant}/oauth2/v2.0/token` | `authorization_code` with `code_verifier`; returns `id_token` |
-| `refresh` | `POST …/token` | `refresh_token`; **returns a new refresh token** |
+| `refresh` | `POST .../token` | `refresh_token`; **returns a new refresh token** |
 | `mailboxTimeZone` | `GET /me/mailboxSettings/timeZone` | Windows name or IANA; 403 without `MailboxSettings.Read` |
 | `listCalendars` | `GET /me/calendars` | Paged with `@odata.nextLink` |
 | `listCalendarView` | `GET /me/calendars/{id}/calendarView` | Expands recurrences; `Prefer: outlook.timezone="UTC"` on every page |
-| `findEventsByMarker` | `GET /me/calendars/{id}/events?$filter=…` | Extended-property filter |
+| `findEventsByMarker` | `GET /me/calendars/{id}/events?$filter=...` | Extended-property filter |
 | `createEvent` | `POST /me/calendars/{id}/events` | With `transactionId` |
 | `updateEvent` | `PATCH /me/calendars/{id}/events/{eventId}` | Partial update |
 | `deleteEvent` | `DELETE /me/calendars/{id}/events/{eventId}` | 404 when already gone |
@@ -25,7 +25,7 @@ form POSTs, and an interface over `fetch` is what the tests replace with a fake.
 ## Facts that shape the code
 
 - **`calendarView` is the right list, not `events`.** It expands recurring series into occurrences
-  inside `startDateTime`–`endDateTime`, each with its own id and times. `/events` returns series
+  inside `startDateTime` to `endDateTime`, each with its own id and times. `/events` returns series
   masters with a recurrence pattern you would have to expand yourself.
 - **Times come back as wall clock plus a zone name**, not as instants: `{ dateTime:
   '2026-10-20T07:00:00.0000000', timeZone: 'UTC' }`, with seven fractional digits. The default zone is
@@ -34,7 +34,7 @@ form POSTs, and an interface over `fetch` is what the tests replace with a fake.
 - **`@odata.nextLink` is an absolute URL carrying the query.** Follow it as given, with the same
   `Prefer` header. The client refuses a next link that is not on `graph.microsoft.com`, so a bug or a
   tampered response cannot send the bearer token elsewhere.
-- **Calendar and event ids are long base64 strings** (`AAMkAGI2…AAA=`) that can contain `/`, `+` and
+- **Calendar and event ids are long base64 strings** (`AAMkAGI2...AAA=`) that can contain `/`, `+` and
   `=`. Every id in a path goes through `encodeURIComponent`. Outlook calendar ids run to about 150
   characters, which matters for `clientState` ([subscriptions.md](subscriptions.md)).
 - **Extended properties are filtered with OData.** The value is a string literal in which `'` is
@@ -67,7 +67,7 @@ export const REQUESTED_SCOPES = [
 
 export class GraphApiError extends Error {
   readonly status: number;
-  /** Graph's `error.code` (`ErrorItemNotFound`…), or the token endpoint's `error` (`invalid_grant`…). */
+  /** Graph's `error.code` (`ErrorItemNotFound`...), or the token endpoint's `error` (`invalid_grant`...). */
   readonly code: string;
 
   constructor(status: number, code: string, message: string) {

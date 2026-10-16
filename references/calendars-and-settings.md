@@ -25,13 +25,13 @@ what the integration does with it.
 `updateCalendarSettings` writes the row (one compare-and-swap, so concurrent toggles serialize), then
 runs what the change implies:
 
-| Before → after | Transition | Effect |
+| Change | Transition | Effect |
 |---|---|---|
-| `syncBusy` off → on | `start-busy` | open subscription, first sync |
-| `syncBusy` on → off | `stop-busy` | delete subscription, delete blocks |
-| `syncBookings` off → on | `backfill-bookings` | write upcoming bookings of this host |
-| `syncBookings` on → off | — | existing events stay |
-| `title` | — | display only |
+| `syncBusy` off to on | `start-busy` | open subscription, first sync |
+| `syncBusy` on to off | `stop-busy` | delete subscription, delete blocks |
+| `syncBookings` off to on | `backfill-bookings` | write upcoming bookings of this host |
+| `syncBookings` on to off | none | existing events stay |
+| `title` | none | display only |
 
 Guards: the calendar must belong to the caller (`calendar-not-found` otherwise, never "forbidden", so
 ids cannot be probed), and booking sync needs `isWritable` (`calendar-not-writable`). A transition that

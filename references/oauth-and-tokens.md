@@ -8,10 +8,10 @@ what was granted, and storing the *new* refresh token every time Microsoft hands
 
 | Step | Where | Value |
 |---|---|---|
-| Register | Entra admin center → App registrations → New registration | *Accounts in any organizational directory* for `tenant: 'organizations'`; add *and personal Microsoft accounts* for `common` |
-| Redirect URI | Authentication → *Web* platform | `https://api.example.com/calendar/microsoft/callback`, exactly as `MICROSOFT_CALENDAR_REDIRECT_URI` |
+| Register | Entra admin center > App registrations > New registration | *Accounts in any organizational directory* for `tenant: 'organizations'`; add *and personal Microsoft accounts* for `common` |
+| Redirect URI | Authentication > *Web* platform | `https://api.example.com/calendar/microsoft/callback`, exactly as `MICROSOFT_CALENDAR_REDIRECT_URI` |
 | Client secret | Certificates & secrets | Expires (24 months at most): when it does, every connection fails. Calendar the rotation |
-| Permissions | API permissions → Microsoft Graph → *Delegated* | `Calendars.ReadWrite`, `MailboxSettings.Read`, `offline_access`, `openid`, `profile` |
+| Permissions | API permissions > Microsoft Graph > *Delegated* | `Calendars.ReadWrite`, `MailboxSettings.Read`, `offline_access`, `openid`, `profile` |
 | Publisher | Branding & properties | Verify the publisher: many tenants block user consent to unverified multi-tenant apps |
 | Marker GUID | your secret manager | `node -e "console.log(crypto.randomUUID())"` once, as `MICROSOFT_CALENDAR_MARKER_GUID`; never change it |
 
@@ -42,9 +42,9 @@ which `grantedScopes` normalises. Without a calendar scope the connection is ref
 ## The round trip
 
 ```
-GET /connect (signed in) ─▶ AuthRequest{state, userId, verifier, +10 min} ─▶ { url } with state + S256 challenge
-Microsoft sign-in + consent ─▶ GET /callback?code&state ─▶ consume(state) atomically ─▶ exchange(code, verifier)
-   ─▶ check scopes ─▶ id token tid:oid ─▶ mailbox zone ─▶ same account? keep : tear down ─▶ save
+GET /connect (signed in) -> AuthRequest{state, userId, verifier, +10 min} -> { url } with state + S256 challenge
+Microsoft sign-in + consent -> GET /callback?code&state -> consume(state) atomically -> exchange(code, verifier)
+   -> check scopes -> id token tid:oid -> mailbox zone -> same account? keep : tear down -> save
 ```
 
 - **The state is a key, not a payload.** Anything put into it can be edited by whoever holds the URL;
@@ -61,10 +61,10 @@ Microsoft sign-in + consent ─▶ GET /callback?code&state ─▶ consume(state
 
 | Event | What happens | Handled by |
 |---|---|---|
-| Access token near expiry (60–90 min) | refreshed 5 min early, saved encrypted | `withAccessToken` |
+| Access token near expiry (60 to 90 min) | refreshed 5 min early, saved encrypted | `withAccessToken` |
 | A 401 on a call | one forced refresh and one retry | `withAccessToken` |
 | Every refresh | **a new refresh token**, stored; the old one is not reused | `toStoredTokens` |
-| `invalid_grant` on refresh | connection → `reauth_required` | `refreshTokens` |
+| `invalid_grant` on refresh | connection set to `reauth_required` | `refreshTokens` |
 | `interaction_required` on refresh | the same: MFA or Conditional Access now needs the user | `refreshTokens` |
 | Reconnect, same `tid:oid` | `connected` again, settings kept, subscriptions renewed, resync | `completeConnect` |
 | Disconnect | subscriptions deleted, blocks and rows deleted, tokens deleted | `disconnect` |

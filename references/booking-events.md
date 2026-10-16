@@ -22,10 +22,10 @@ never inside it: a retried transaction would call Graph twice, and a slow call h
 
 ```
 findEventsByMarker(bookingId)
-  ├─ several ─▶ delete all but the first (two triggers raced and both created one)
-  ├─ one ─────▶ subject and times unchanged? ── yes ─▶ done, nothing sent
-  │                                           └ no ──▶ PATCH
-  └─ none ────▶ POST with a fresh transactionId
+  +- several -> delete all but the first (two triggers raced and both created one)
+  +- one -----> subject and times unchanged? -- yes -> done, nothing sent
+  |                                           + no --> PATCH
+  +- none ----> POST with a fresh transactionId
 ```
 
 - **Find before create.** There is no client-chosen id and no 409 to fall back on, so the marker search
@@ -228,7 +228,7 @@ async function writeToCalendar(
 
 /**
  * Booking confirmed (or rescheduled into a new booking): write it to every booking-sync calendar
- * of the primary host. Never throws — an Outlook outage must not fail the booking.
+ * of the primary host. Never throws: an Outlook outage must not fail the booking.
  */
 export async function pushBookingEvent(
   deps: CalendarSyncDeps,

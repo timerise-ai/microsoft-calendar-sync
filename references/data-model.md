@@ -32,18 +32,18 @@ they are the API's vocabulary, not the domain's.
 
 **Running next to `google-calendar-sync`?** Both skills use the same record names on purpose. Keep them
 in separate folders (`google-calendar/`, `microsoft-calendar/`) and separate collections or tables,
-which the stores here already use (`microsoftCalendar…`, `microsoft_calendar_…`). The availability
+which the stores here already use (`microsoftCalendar...`, `microsoft_calendar_...`). The availability
 engine reads both sets of busy blocks by user id and merges them.
 
 ## Lifecycle
 
 ```
              connect             toggle syncBusy on                       toggle off / calendar gone / disconnect
- (nothing) ──────────▶ rows ─────────────────────────▶ subscription + blocks ─────────────────────────────────────▶ (nothing)
-                        │  invalid_grant / interaction_required      │  cron every 12 h: PATCH renew or replace, resync
-                        ▼                                            ▼
-                 reauth_required ── reconnect same account (tid:oid) ──▶ connected, settings kept, subscriptions renewed
-                                 └─ reconnect other account ──────────▶ old rows torn down, new rows
+ (nothing) ----------> rows -------------------------> subscription + blocks -------------------------------------> (nothing)
+                        |  invalid_grant / interaction_required      |  cron every 12 h: PATCH renew or replace, resync
+                        v                                            v
+                 reauth_required -- reconnect same account (tid:oid) --> connected, settings kept, subscriptions renewed
+                                 +- reconnect other account ----------> old rows torn down, new rows
 ```
 
 ## Types
@@ -230,7 +230,7 @@ export interface CalendarSyncConfig {
   redirectUri: string;
   /** Public HTTPS URL of the notifications route. */
   notificationUrl: string;
-  /** Also send lifecycle notifications (`subscriptionRemoved`, `missed`…) to `notificationUrl`. */
+  /** Also send lifecycle notifications (`subscriptionRemoved`, `missed`...) to `notificationUrl`. */
   lifecycleNotifications: boolean;
   /** HMAC key for `clientState`. Fails closed when empty. */
   clientStateSecret: string;

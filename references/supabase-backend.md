@@ -102,13 +102,13 @@ transaction. `mutateCalendar` uses optimistic concurrency instead:
 
 1. Read the row and its `version`.
 2. Compute the next row with `fn`.
-3. `update … where id = $id and version = $read` and ask for the row back.
+3. `update ... where id = $id and version = $read` and ask for the row back.
 4. No row back means someone else wrote first: start again (up to five times).
 
 Creation is `insert`; a unique violation (`23505`) means a concurrent request created it, and the loop
-retries as an update. `consumeAuthRequest` is a single `delete … returning`, atomic on its own.
+retries as an update. `consumeAuthRequest` is a single `delete ... returning`, atomic on its own.
 
-With direct Postgres access (Drizzle, Prisma, `pg`), `select … for update` inside a transaction is the
+With direct Postgres access (Drizzle, Prisma, `pg`), `select ... for update` inside a transaction is the
 simpler equivalent; keep the `version` column anyway.
 
 ## Notes
@@ -272,7 +272,7 @@ export function createSupabaseCalendarStore(supabase: SupabaseClient): CalendarS
     },
 
     async consumeAuthRequest(state) {
-      // DELETE … RETURNING is atomic: of two concurrent callbacks, one gets the row.
+      // DELETE ... RETURNING is atomic: of two concurrent callbacks, one gets the row.
       const row = check(
         await supabase.from(T.authRequests).delete().eq('state', state).select().maybeSingle()
       ) as { state: string; user_id: string; code_verifier: string; expires_at: string } | null;

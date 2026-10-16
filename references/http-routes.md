@@ -1,6 +1,6 @@
 # HTTP routes
 
-Seven handlers on the Web `Request → Response` API, so they mount unchanged in Next.js route handlers,
+Seven handlers on the Web `Request`/`Response` API, so they mount unchanged in Next.js route handlers,
 Hono, Bun or Deno, and through a small adapter in Express.
 
 | Route | Method | Auth | Answers |
@@ -13,7 +13,7 @@ Hono, Bun or Deno, and through a small adapter in Express.
 | `/calendar/microsoft/notifications` | POST | none (signed clientState) | 200 text/plain for validation, 202 for notifications, 400 for a malformed body |
 | `/calendar/microsoft/cron` | POST | `Bearer CRON_SECRET` | the renewal report |
 
-- **Validation first.** Creating a subscription makes Graph POST `?validationToken=…` to the URL and
+- **Validation first.** Creating a subscription makes Graph POST `?validationToken=...` to the URL and
   wait up to 10 seconds for the token back, decoded, as `text/plain` with 200. The subscription is
   only created if that succeeds, so the route must be deployed and public before anyone turns on busy
   sync. Lifecycle URLs are validated the same way.
@@ -242,7 +242,7 @@ export function createCalendarRoutes(deps: CalendarSyncDeps, options: CalendarRo
   }
 
   return {
-    /** GET → `{ url }`; the client navigates to it. */
+    /** GET returns `{ url }`; the client navigates to it. */
     async connect(request: Request): Promise<Response> {
       const userId = await options.authenticate(request);
       if (!userId) return json({ error: 'unauthenticated' }, 401);
@@ -274,7 +274,7 @@ export function createCalendarRoutes(deps: CalendarSyncDeps, options: CalendarRo
       }
     },
 
-    /** GET → connection, calendars and their health. Refreshes from Graph; falls back to stored rows. */
+    /** GET returns the connection, calendars and their health. Refreshes from Graph; falls back to stored rows. */
     async list(request: Request): Promise<Response> {
       const userId = await options.authenticate(request);
       if (!userId) return json({ error: 'unauthenticated' }, 401);
@@ -348,7 +348,7 @@ One module builds the dependencies. This example uses Firestore and environment 
 store and the declared host functions for your own.
 
 ```ts
-// microsoft-calendar/setup.ts — the one place that builds the deps (example: Firestore, env vars)
+// microsoft-calendar/setup.ts: the one place that builds the deps (example: Firestore, env vars)
 import { getFirestore } from 'firebase-admin/firestore';
 
 import { createGraphApi } from './graphApi';
@@ -411,7 +411,7 @@ export const calendarRoutes = createCalendarRoutes(calendarDeps, {
 Next.js App Router (pass `defer: after` from `next/server` in `setup.ts` there):
 
 ```ts
-// app/api/calendar/microsoft/[action]/route.ts — Next.js App Router
+// app/api/calendar/microsoft/[action]/route.ts: Next.js App Router
 import { calendarRoutes } from '@/microsoft-calendar/setup';
 
 export async function GET(request: Request, { params }: { params: Promise<{ action: string }> }) {
@@ -443,7 +443,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ca
 Express (the adapter turns each request into a Web `Request` once):
 
 ```ts
-// server/calendarRouter.ts — Express: adapt each request to the Web API once, and send the Response back.
+// server/calendarRouter.ts: Express: adapt each request to the Web API once, and send the Response back.
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
 
 import { calendarRoutes } from '@/microsoft-calendar/setup';
@@ -489,7 +489,8 @@ calendarRouter.post('/calendar/microsoft/cron', route(calendarRoutes.cron));
 
 ## Checklist
 
-- [ ] Notification URL public and HTTPS before busy sync is offered; same value as `MICROSOFT_CALENDAR_NOTIFICATION_URL`
+- [ ] Notification URL public and HTTPS before busy sync is offered; same value as
+  `MICROSOFT_CALENDAR_NOTIFICATION_URL`
 - [ ] Callback URL registered on the app; same value as `MICROSOFT_CALENDAR_REDIRECT_URI`
 - [ ] `defer` runs the work after the response on this platform; never awaited inline
 - [ ] `authenticate` is the host's real session check, returning the user id

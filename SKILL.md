@@ -17,8 +17,9 @@ description: >
   to the mailbox zone, single-flight sync, booking events found again by an extended-property marker,
   in-place subscription renewal that replaces lost subscriptions, derived health per calendar,
   Firestore and Supabase stores, and a 43-test node:test suite run under four process time zones.
-  TypeScript on any Node server (Next.js route handlers, Express); storage and the booking source are
-  seams. Not Google Calendar, not Exchange on-premises (EWS), not a calendar UI.
+  TypeScript for Next.js App Router route handlers, with an Express adapter for any other Node server;
+  storage, auth and the booking source are seams behind CalendarStore, authenticate and BookingSource.
+  Not Google Calendar, not Exchange on-premises (EWS), not a calendar UI.
 ---
 
 # Microsoft Calendar Sync
@@ -38,25 +39,25 @@ time. Unlike Google, Graph picks event ids, wants answers within 3 s and allows 
 
 ## When NOT to use
 
-- **Google Calendar** → `google-calendar-sync`. Same architecture and record shapes, different API.
-- **Generating bookable slots, subtracting busy time** → `time-slot-generator`. This skill *produces*
+- **Google Calendar**: use `google-calendar-sync`. Same architecture and record shapes, different API.
+- **Generating bookable slots, subtracting busy time**: use `time-slot-generator`. This skill *produces*
   the busy blocks it consumes.
-- **Signing users in with Microsoft (SSO)** → an identity concern; this skill asks for calendar access
+- **Signing users in with Microsoft (SSO)** is an identity concern; this skill asks for calendar access
   of an already signed-in user.
-- **Room and resource mailboxes, or organisation-wide access without per-user consent** → application
-  permissions with admin consent are a different design.
-- **Exchange Server on-premises** → EWS, not Graph.
+- **Room and resource mailboxes, or organisation-wide access without per-user consent** need
+  application permissions with admin consent, a different design.
+- **Exchange Server on-premises** speaks EWS, not Graph.
 
 ## Architecture
 
 ```
-          connect (PKCE, single-use state) ─▶ callback ─▶ id token tid:oid + encrypted tokens + mailbox zone ─▶ rows
-                                                                                        │
- inbound   Graph ── POST {value[]} ─▶ /notifications ─▶ verify clientState ─▶ 202 ─▶ defer(syncBusy) ─▶ calendarView pages
-              ▲                                                                       ─▶ toBusyBlock ─▶ diffBusy ─▶ busy blocks
-              └── subscription ◀── cron: PATCH renew, 404 → replace, 409 → clear, resync every busy calendar
- outbound  booking confirmed ─▶ find by marker ─▶ unchanged? skip : PATCH ─ none? POST (transactionId) ─▶ Teams link back
-           booking cancelled ─▶ find by marker ─▶ DELETE each (404 = done)
+          connect (PKCE, single-use state) -> callback -> id token tid:oid + encrypted tokens + mailbox zone -> rows
+                                                                                        |
+ inbound   Graph -- POST {value[]} -> /notifications -> verify clientState -> 202 -> defer(syncBusy) -> calendarView pages
+              ^                                                                       -> toBusyBlock -> diffBusy -> busy blocks
+              +-- subscription <-- cron: PATCH renew, 404 replace, 409 clear, resync every busy calendar
+ outbound  booking confirmed -> find by marker -> unchanged? skip : PATCH - none? POST (transactionId) -> Teams link back
+           booking cancelled -> find by marker -> DELETE each (404 = done)
 ```
 
 ## Critical facts
@@ -96,16 +97,19 @@ time. Unlike Google, Graph picks event ids, wants answers within 3 s and allows 
 
 ## Adaptation Contract
 
+This table is the seam contract; the skill has no `adaptation.md`. The rename table is in
+[data-model.md](references/data-model.md), the order of work is the quick start below.
+
 | Seam | The skill ships | The host supplies |
 |---|---|---|
-| Domain entities | Connection, LinkedCalendar, WatchSubscription, BusyBlock, BookingForCalendar | Its names (staff, resource, appointment…) |
+| Domain entities | Connection, LinkedCalendar, WatchSubscription, BusyBlock, BookingForCalendar | Its names (staff, resource, appointment) |
 | Tenant scope | Per user: one Microsoft account per `userId` | Its user id; org scoping stays in its guard |
-| Auth guard | `authenticate(request) → userId \| null` | Session, Clerk, NextAuth, Firebase, Supabase |
+| Auth guard | `authenticate(request)`, returning `userId \| null` | Session, Clerk, NextAuth, Firebase, Supabase |
 | Data access | `CalendarStore` + Firestore and Supabase implementations | Its ORM or SDK |
 | Bookings | `BookingSource` + `pushBookingEvent` / `removeBookingEvent` | Calls them from its booking status flow |
 | Availability | Busy blocks per user, `listHostBusy` query | Its slot engine (`time-slot-generator`) |
 | Time zone | Mailbox zone; `hostTimeZone(userId)`; `defaultTimeZone` | The host's business zone |
-| HTTP | Web `Request → Response` handlers | Next.js route handlers, Express adapter |
+| HTTP | Web `Request`/`Response` handlers | Next.js route handlers, Express adapter |
 | Background work | `defer` for notifications; `renewSubscriptions` every 12 h | `after()`, `waitUntil`, Cloud Scheduler, Vercel Cron |
 | Strings | `describeBooking` (event title/body), error codes | Its i18n |
 | Secrets | Client id/secret, clientState secret, 32-byte token key, marker GUID | Its secret manager |
@@ -113,22 +117,22 @@ time. Unlike Google, Graph picks event ids, wants answers within 3 s and allows 
 
 ## Quick start
 
-1. Register the app in Entra ID and generate the marker GUID —
+1. Register the app in Entra ID and generate the marker GUID:
    [oauth-and-tokens.md](references/oauth-and-tokens.md).
-2. Copy the types and decide the rename — [data-model.md](references/data-model.md).
-3. Copy the Graph client — [graph-api.md](references/graph-api.md) — and the zone map —
+2. Copy the types and decide the rename: [data-model.md](references/data-model.md).
+3. Copy the Graph client: [graph-api.md](references/graph-api.md); and the zone map:
    [time-zones.md](references/time-zones.md).
-4. Copy inbound sync — [busy-sync.md](references/busy-sync.md); outbound —
-   [booking-events.md](references/booking-events.md); subscriptions —
-   [subscriptions.md](references/subscriptions.md); the calendar list and toggles —
+4. Copy inbound sync: [busy-sync.md](references/busy-sync.md); outbound:
+   [booking-events.md](references/booking-events.md); subscriptions:
+   [subscriptions.md](references/subscriptions.md); the calendar list and toggles:
    [calendars-and-settings.md](references/calendars-and-settings.md).
-5. Pick a store — [firestore-backend.md](references/firestore-backend.md) or
+5. Pick a store: [firestore-backend.md](references/firestore-backend.md) or
    [supabase-backend.md](references/supabase-backend.md).
-6. Mount the routes, `defer` and the cron — [http-routes.md](references/http-routes.md).
-7. Copy the suite and run it under two `TZ` values — [testing.md](references/testing.md),
+6. Mount the routes, `defer` and the cron: [http-routes.md](references/http-routes.md).
+7. Copy the suite and run it under two `TZ` values: [testing.md](references/testing.md),
    [test-suite.md](references/test-suite.md), [test-flows.md](references/test-flows.md).
-8. Give operators the health view — [operations.md](references/operations.md).
-9. Porting an existing Graph integration? Fix order in [provenance.md](references/provenance.md).
+8. Give operators the health view: [operations.md](references/operations.md).
+9. Repairing an existing Graph integration? The fix order is in [provenance.md](references/provenance.md).
 
 ## Reference directory
 
@@ -147,4 +151,6 @@ time. Unlike Google, Graph picks event ids, wants answers within 3 s and allows 
 | Supabase / Postgres | schema.sql, RLS, service role, optimistic concurrency, 23505, PostgREST 1000 rows | [supabase-backend.md](references/supabase-backend.md) |
 | Proving it | node:test, memory store, fake Graph, TZ=, mutation check | [testing.md](references/testing.md), [test-suite.md](references/test-suite.md), [test-flows.md](references/test-flows.md) |
 | Running it | health, stale, subscription-expired, env vars, throttling, runbook, tunnel, localhost | [operations.md](references/operations.md) |
-| Why it is built this way | provenance, defects, kept deliberately, port order | [provenance.md](references/provenance.md) |
+| Why it is built this way | provenance, defects, kept deliberately, fix order | [provenance.md](references/provenance.md) |
+
+Part of the [Timerise Skills](https://github.com/timerise-ai/skills) index, which lists the sibling skills.

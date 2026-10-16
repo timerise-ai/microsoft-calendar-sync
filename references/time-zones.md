@@ -2,7 +2,7 @@
 
 Timed events carry their instant. All-day events do not: Outlook stores them as floating dates, and
 Graph returns them as midnight to midnight in whatever zone the request asked for. In UTC, a Warsaw
-user's vacation on 3–7 August arrives as `2026-08-03T00:00:00` to `2026-08-08T00:00:00`, which is
+user's vacation on 3 to 7 August arrives as `2026-08-03T00:00:00` to `2026-08-08T00:00:00`, which is
 two hours late at both ends. The dates are right; the instants need the zone the user lives in.
 
 ## Which zone
@@ -44,7 +44,7 @@ The table changes rarely (a new Windows zone every year or two). Regenerate it f
 ```ts
 // microsoft-calendar/timeZones.ts
 /**
- * Windows time-zone names → IANA, the CLDR `windowsZones` "001" (default territory) mapping.
+ * Windows time-zone names to IANA, the CLDR `windowsZones` "001" (default territory) mapping.
  * Outlook stores a mailbox's zone as a Windows name ("W. Europe Standard Time") unless the user
  * picked an IANA one; `Intl` understands only IANA.
  */

@@ -7,13 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-10-16
 
-First release, extracted from a production booking API's Microsoft 365 calendar integration and hardened.
+First release: two-way Microsoft 365 calendar sync over Graph, written by the engineer who builds the
+calendar integrations of a booking platform and audited against the earlier implementation.
 
 ### Added
 
 - OAuth connection with single-use server-side state, PKCE, `prompt=select_account`, granted-scope
   check, account identity from the id token's `tid:oid`, AES-256-GCM token storage, refresh-token
-  rotation, `invalid_grant` / `interaction_required` → `reauth_required`, same-account reconnect that
+  rotation, `invalid_grant` / `interaction_required` mark `reauth_required`, same-account reconnect that
   keeps settings, and disconnect.
 - A dependency-free Microsoft Graph client on `fetch`, with throttling retries and a next-link guard.
 - Mailbox time zones, with the CLDR Windows-to-IANA table.

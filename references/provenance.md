@@ -1,16 +1,20 @@
 # Provenance
 
-Extracted from the Microsoft 365 calendar integration of a production booking API (GraphQL and REST
-on Node, Firestore) that offers hosts Google and Microsoft calendars side by side. The Microsoft side
-shared its busy-time machinery with the Google side, which had already been hardened: single-use OAuth
-state with PKCE, encrypted tokens at rest, deterministic busy-block ids with a row-based diff, own
-bookings skipped by their marker, free/declined/cancelled rules, every page of the calendar view, and
-a cron that resyncs every busy calendar. Those are carried over. The architecture, record shapes and
-test method follow the sibling skill `google-calendar-sync`.
+This module is the Microsoft 365 calendar integration of a booking platform, written down by the engineer
+who builds it and audited against the earlier implementation: a Node API on a document database that offers
+hosts Google and Microsoft calendars side by side. Its Microsoft side shared the busy-time machinery of its
+Google side, which had already been hardened: single-use OAuth state with PKCE, encrypted tokens at rest,
+deterministic busy-block ids with a row-based diff, own bookings skipped by their marker, the free, declined
+and cancelled rules, every page of the calendar view, and a cron that resyncs every busy calendar. Those are
+carried over. The architecture, record shapes and test method follow the sibling skill
+`google-calendar-sync`.
 
-The audit read the Microsoft integration end to end against Graph's documentation and the MSAL library
-it used. Each defect below was confirmed against the source; each is fixed in the templates and, where
-it can be, pinned by a test in [test-suite.md](test-suite.md) or [test-flows.md](test-flows.md).
+The audit read the Microsoft integration end to end against Graph's documentation and the MSAL library it
+used. This file is the ledger for the person editing the skill: what the audit fixed and how the templates
+verify it, what it changed by design, what was kept deliberately and why it is safe, and what was designed
+here and has never run in production. Each defect below was confirmed against the earlier implementation;
+each is fixed in the templates and, where it can be, pinned by a test in [test-suite.md](test-suite.md) or
+[test-flows.md](test-flows.md).
 
 ## Fixed in the templates
 
@@ -19,9 +23,9 @@ it can be, pinned by a test in [test-suite.md](test-suite.md) or [test-flows.md]
 The integration used `@azure/msal-node` and read the refresh token from MSAL's result. MSAL keeps
 refresh tokens in its own in-memory cache and does not put them on the result (confirmed in MSAL 5.1's
 response handler), so the code stored an empty refresh token and logged a warning. When the first
-access token expired, every call failed with "refresh token is missing — user must re-authenticate":
+access token expired, every call failed with "refresh token is missing, user must re-authenticate":
 busy time froze and bookings stopped appearing. **Shipped:** the token endpoint over `fetch`, and the
-refresh token from every response stored, rotation included — [oauth-and-tokens.md](oauth-and-tokens.md).
+refresh token from every response stored, rotation included, in [oauth-and-tokens.md](oauth-and-tokens.md).
 
 ### 2. Graph could not accept a single subscription, so busy time was never imported
 
@@ -30,14 +34,14 @@ The `clientState` held the calendar id, our subscription id, the user id and a s
 toggle and the cron both opened the subscription *before* the first sync in the same step, the failure
 also skipped the sync: a calendar with busy sync on never imported anything. **Shipped:** the
 clientState carries only a UUID and its HMAC (80 characters), and a subscription failure is recorded
-without skipping the sync — [subscriptions.md](subscriptions.md).
+without skipping the sync, in [subscriptions.md](subscriptions.md).
 
 ### 3. Notifications were answered only after a full sync
 
 The webhook listed the whole calendar and wrote its busy blocks before replying, once per notification.
 Graph wants a 2xx within 3 seconds; slower endpoints are delayed by ten minutes and then have their
 notifications dropped. **Shipped:** verify, answer 202, sync through the host's `defer`, with a
-single-flight lease collapsing the burst — [http-routes.md](http-routes.md).
+single-flight lease collapsing the burst, in [http-routes.md](http-routes.md).
 
 ### 4. A subscription Graph dropped was never replaced
 
@@ -51,7 +55,7 @@ create clears the orphan Graph still holds; lifecycle notifications trigger the 
 All-day events were skipped entirely, because Graph returns them as floating midnights and anchoring
 them needs the mailbox's zone. Out-of-office days, the way most people enter a vacation, left the host
 bookable. **Shipped:** the mailbox zone (Windows names mapped to IANA), else the host's zone, else a
-configured default — [time-zones.md](time-zones.md).
+configured default, in [time-zones.md](time-zones.md).
 
 ### 6. Only the first page of calendars was listed
 
@@ -69,7 +73,7 @@ Microsoft calendar row and its busy blocks, even for the same account. **Shipped
 
 Each push POSTed a new event. A repeated trigger created a second one; the backfill de-duplicated only
 against the 180-day window. **Shipped:** find by marker first, PATCH or skip, POST with a
-`transactionId`, and collapse duplicates — [booking-events.md](booking-events.md).
+`transactionId`, and collapse duplicates, in [booking-events.md](booking-events.md).
 
 ### 9. Smaller ones
 
@@ -88,15 +92,15 @@ against the 180-day window. **Shipped:** find by marker first, PATCH or skip, PO
 - **180-day horizon, 12-hour cron, 48-hour renewal window.**
 - **`organizations` as the default tenant**: work and school accounts, where Teams meetings exist.
   `common` adds personal accounts.
-- **Attendees invited by default** (`inviteAttendees: 'all'`), as in production: guests and co-hosts
-  receive the Outlook invitation. `hosts` and `none` are options.
+- **Attendees invited by default** (`inviteAttendees: 'all'`), as the earlier implementation did: guests
+  and co-hosts receive the Outlook invitation. `hosts` and `none` are options.
 - **Teams join URLs written back to the booking** through `onConferenceLink`.
 - **Only the primary host's calendars receive the event**; deletion walks every host.
 - **`canEdit` decides writability.**
 - **Turning booking sync off leaves existing events.**
 - **One Microsoft account per user.**
 
-## Changed
+## Changed by design
 
 - **`fetch` instead of MSAL and axios**, so the refresh token is visible and the client can be faked.
 - **`prompt=select_account` instead of `prompt=consent`**, which brings the admin-approval page back
@@ -107,18 +111,21 @@ against the 180-day window. **Shipped:** find by marker first, PATCH or skip, PO
   single queries, and Google and Microsoft records never collide.
 - **Web `Request`/`Response` handlers** instead of Express routes plus GraphQL resolvers.
 
-## Added
+## Designed here, not yet run in production
+
+None of these ran in the earlier implementation. Each is covered by the suite where a test can reach it,
+and none has carried production traffic yet.
 
 - Lifecycle notifications (`subscriptionRemoved`, `reauthorizationRequired`, `missed`).
 - Throttling retries honouring `Retry-After`, and a guard that keeps next links on Graph.
-- Derived per-calendar health — [operations.md](operations.md).
+- Derived per-calendar health, in [operations.md](operations.md).
 - Single-flight sync lease with a queued rerun.
 - Disconnect.
 - Granted-scope check on connect (`canWrite`, mailbox zone).
 - Orphan subscription clean-up in the cron.
 - `inviteAttendees`, unchanged-write skip, duplicate collapse.
-- Supabase/Postgres store and schema — [supabase-backend.md](supabase-backend.md).
-- The test suite, memory store and fake Graph — [testing.md](testing.md).
+- Supabase/Postgres store and schema, in [supabase-backend.md](supabase-backend.md).
+- The test suite, memory store and fake Graph, in [testing.md](testing.md).
 
 ## Known limit
 
@@ -126,7 +133,7 @@ Co-hosts' copies of a booking's meeting carry no marker, because extended proper
 organizer's item. A co-host who syncs busy time from the calendar the invitation lands in gets the
 booking back as a busy block. See [busy-sync.md](busy-sync.md) for the two ways around it.
 
-## If you are porting the original
+## Repairing an existing integration with these defects
 
 Fix in this order, most damaging first:
 
@@ -140,6 +147,6 @@ Fix in this order, most damaging first:
 5. Reauth state, same-account reconnect, calendar paging (#6, #7).
 6. Idempotent events and the smaller ones (#8, #9).
 
-**Keep the marker GUID the original wrote** (set `MICROSOFT_CALENDAR_MARKER_GUID` to it). Events already
-in hosts' calendars carry it; a new GUID would make busy sync import them as busy time and the outbound
-side create a second copy of each.
+**Keep the marker GUID the existing integration wrote** (set `MICROSOFT_CALENDAR_MARKER_GUID` to
+it). Events already in hosts' calendars carry it; a new GUID would make busy sync import them as busy time
+and the outbound side create a second copy of each.

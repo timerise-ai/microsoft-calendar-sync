@@ -39,14 +39,14 @@ or have the engine ignore a host's busy blocks that exactly cover a booking the 
 
 ```
 syncBusy(calendarId)
-  lease: row.syncBusy? lease free? ── no lease ──▶ set resyncRequested, return 'queued'
-     │ acquired
-     ▼
-  calendarView every page of [now, now + horizon) ── any page fails ──▶ record lastSyncError, release, throw (nothing deleted)
-     ▼
-  zone for all-day events ─▶ toBusyBlock each ─▶ diffBusy(stored, desired) ─▶ applyBusyDiff ─▶ lastSyncedAt
-     ▼
-  release: resyncRequested? ── yes (max 3 runs) ──▶ run again
+  lease: row.syncBusy? lease free? -- no lease --> set resyncRequested, return 'queued'
+     | acquired
+     v
+  calendarView every page of [now, now + horizon) -- any page fails --> record lastSyncError, release, throw (nothing deleted)
+     v
+  zone for all-day events -> toBusyBlock each -> diffBusy(stored, desired) -> applyBusyDiff -> lastSyncedAt
+     v
+  release: resyncRequested? -- yes (max 3 runs) --> run again
 ```
 
 - **Single flight per calendar.** Graph often sends several notifications for one edit (created, then
@@ -369,5 +369,5 @@ async function runOnce(deps: CalendarSyncDeps, calendar: LinkedCalendar): Promis
 - [ ] Every page read before any delete
 - [ ] Events carrying the booking marker skipped
 - [ ] All-day events anchored to the mailbox zone, or the host's
-- [ ] `horizonDays` ≥ the booking window
+- [ ] `horizonDays` at least the booking window
 - [ ] Busy blocks read by user id and treated as host busy time, in UTC

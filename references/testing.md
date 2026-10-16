@@ -34,7 +34,7 @@ the server's `TZ`; a test that passes only in UTC is how "works in production, f
 | all-day vacation at mailbox midnights; DST day 23 h | Vacations not blocking, or blocking the wrong hours |
 | own bookings not imported | Group sessions blocked after the first booking |
 | free / working elsewhere / declined / cancelled | Busy time the user does not have |
-| clientState ≤ 128 and bound to its subscription | Graph refusing every subscription; replayed notifications |
+| clientState at most 128 and bound to its subscription | Graph refusing every subscription; replayed notifications |
 | Windows zone names mapped | All-day events falling back to the wrong zone |
 | event times: zone wall clock, UTC near DST | Bookings an hour off on the night clocks change |
 | invite modes; hosts without e-mail dropped | Unwanted e-mails; Graph rejecting the event |
@@ -50,7 +50,7 @@ the server's `TZ`; a test that passes only in UTC is how "works in production, f
 | pushed twice is one event, no second write | Duplicate events; duplicate e-mails to attendees |
 | duplicates collapse; cancel twice; re-confirm | Leftover events; errors on repeat |
 | rotated refresh token stored | Connections dying after an hour |
-| `invalid_grant` / `interaction_required` → reauth; reconnect keeps settings | Empty calendar lists; re-configuring after every revoke |
+| `invalid_grant` / `interaction_required` mean reauth; reconnect keeps settings | Empty calendar lists; re-configuring after every revoke |
 | other account tears down; calendar removed tears down | Stale busy time from calendars the user left |
 | routes: validation text, `defer`, redirects, cron closed | Sync inline in the route; JSON to a browser |
 
@@ -224,7 +224,7 @@ export function fakeIdToken(claims: Record<string, string>): string {
   return `${part({ alg: 'none' })}.${part(claims)}.`;
 }
 
-/** Wall clock in `timeZone` → instant, the way Exchange reads an event's start and end. */
+/** Wall clock in `timeZone` to an instant, the way Exchange reads an event's start and end. */
 function toInstant(value: GraphDateTime | undefined): Date {
   const wall = Date.parse(`${value?.dateTime ?? ''}Z`);
   const zone = value?.timeZone ?? 'UTC';
