@@ -121,8 +121,7 @@ Every template is copied verbatim, renames from [data-model.md](references/data-
 `setup.ts` and the route files are adapted. A template that looks wrong is kept as shipped and named in the
 final summary. The package registry is not an external service: install the store's SDK from it.
 
-1. Register the app in Entra ID and generate the marker GUID:
-   [oauth-and-tokens.md](references/oauth-and-tokens.md).
+1. Register the Entra app, generate the marker GUID: [oauth-and-tokens.md](references/oauth-and-tokens.md).
 2. Copy the types and decide the rename: [data-model.md](references/data-model.md); the Graph client
    [graph-api.md](references/graph-api.md); the zone map [time-zones.md](references/time-zones.md).
 3. Copy inbound sync [busy-sync.md](references/busy-sync.md), outbound
@@ -130,7 +129,8 @@ final summary. The package registry is not an external service: install the stor
    the toggles [calendars-and-settings.md](references/calendars-and-settings.md).
 4. Pick a store and install its SDK: [firestore-backend.md](references/firestore-backend.md) or
    [supabase-backend.md](references/supabase-backend.md).
-5. Adapt `setup.ts` (store, host seams, log, `defer`; config lines stay), mount the routes unwrapped:
+5. Adapt `setup.ts` (store, host seams, log, `defer`; config lines stay: personal Outlook.com accounts are
+   `MICROSOFT_CALENDAR_TENANT=common` in the handover, never a code default), mount the routes unwrapped:
    [http-routes.md](references/http-routes.md). `authenticate` never reads a user id the client sends.
 6. Copy [test-suite.md](references/test-suite.md) and [test-flows.md](references/test-flows.md) unchanged;
    `npm test` runs them as [testing.md](references/testing.md) shows, 43 tests. Never edit or convert them.

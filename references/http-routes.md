@@ -362,7 +362,8 @@ the whole job of the module; it needs no fallback values, no `503` of its own an
 What a host changes in `setup.ts` is the store line, the four declared host seams, `log` and `defer`. The
 `config` block stays as shipped: a different default for the operator (tenant `common`, an
 `inviteAttendees` mode) is set through the variable or `DEFAULT_SYNC_SETTINGS` and named in the final
-summary, never written into a fallback.
+summary, never written into a fallback. A task that names Outlook.com or personal accounts is the common
+case: keep `|| DEFAULT_SYNC_SETTINGS.tenant`, and tell the operator to set `MICROSOFT_CALENDAR_TENANT=common`.
 
 ```ts
 // microsoft-calendar/setup.ts: the one place that builds the deps (example: Firestore, env vars)
