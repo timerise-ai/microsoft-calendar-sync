@@ -24,3 +24,9 @@ isolated: true
 timedOut: false
 runUrl: https://github.com/timerise-ai/microsoft-calendar-sync/actions/runs/38948031103
 ---
+
+Rubric 8/8, scored from the final summary. The templates are copied unchanged with only `setup.ts` adapted
+(the Supabase store, a verified Supabase login, Next.js `after`, settings read on first request); `npm test`
+runs the 43 shipped tests in four zones through `scripts/test-calendar.sh`; `authenticate` never takes a user
+id from the request; `.env.example` holds the eleven variables plus the three Supabase ones; and the summary
+ends with the four operator steps, the 12-hour cron and the once-only GUID and key included. Not rerun.
