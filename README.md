@@ -1,5 +1,7 @@
 # microsoft-calendar-sync
 
+![microsoft-calendar-sync](.github/cover.svg)
+
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-open_format-059669)](https://agentskills.io)
 [![skills.sh](https://img.shields.io/badge/skills.sh-npx_skills_add-059669)](https://www.skills.sh)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-059669)](https://docs.claude.com/en/docs/claude-code/skills)
@@ -94,6 +96,7 @@ through `/skills` in Gemini CLI.
 | `references/provenance.md` | The audit ledger: fixed, changed by design, kept deliberately, designed here |
 | `evals/` | `prompts.md` with what an operator types, and one file per agent eval run |
 | `.github/workflows/agent-eval.yml` | Runs the agent evals on every published release |
+| `.github/cover.svg` | The cover at the top of this file: the calendar sync motif from the skill's page on timerise.ai, shared with its sibling |
 | `CHANGELOG.md` | One section per release, newest first |
 | `CLAUDE.md` | Editing conventions for an agent working on this repository |
 | `LICENSE` | MIT |
